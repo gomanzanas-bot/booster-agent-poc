@@ -2,27 +2,35 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 2rem;
-  background: #1a1a2e;
+  padding: 0 2rem;
+  height: 60px;
+  background: rgba(15, 12, 41, 0.96);
+  backdrop-filter: blur(8px);
   color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 .nav-brand {
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
 }
 
 .nav-links {
   list-style: none;
   display: flex;
-  gap: 1.5rem;
+  gap: 1.75rem;
 }
 
 .nav-links a {
-  color: #ccc;
+  color: rgba(255,255,255,0.6);
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 500;
   transition: color 0.2s;
 }
 

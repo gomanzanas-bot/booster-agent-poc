@@ -6,7 +6,10 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
-  background: #f8f9fa;
+  background: #fff;
   color: #1a1a2e;
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
+
+a { color: inherit; }
