@@ -6,7 +6,7 @@
 
 /* ── Hero ───────────────────────────────────────────────────── */
 .hero {
-  background: linear-gradient(135deg, #0f0c29, #1a1a4e, #24243e);
+  background: linear-gradient(135deg, #290c0f, #4e1a1a, #3e2424);
   color: #fff;
   padding: 7rem 1.5rem 6rem;
   text-align: center;
@@ -20,7 +20,7 @@
 .badge {
   display: inline-block;
   background: rgba(255,255,255,0.12);
-  color: #c9c9ff;
+  color: #ffc9c9;
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -66,17 +66,17 @@
 }
 .btn:hover { transform: translateY(-1px); opacity: 0.9; }
 
-.btn-light   { background: #fff; color: #1a1a4e; }
+.btn-light   { background: #fff; color: #4e1a1a; }
 .btn-ghost   { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,0.4); }
-.btn-primary-dark { background: #1a1a4e; color: #fff; }
+.btn-primary-dark { background: #4e1a1a; color: #fff; }
 
 /* ── Stats bar ──────────────────────────────────────────────── */
 .stats {
   display: flex;
   justify-content: center;
   gap: 0;
-  background: #f0f0fa;
-  border-bottom: 1px solid #e0e0f0;
+  background: #faf0f0;
+  border-bottom: 1px solid #f0e0e0;
   flex-wrap: wrap;
 }
 
@@ -85,14 +85,14 @@
   flex-direction: column;
   align-items: center;
   padding: 1.75rem 3rem;
-  border-right: 1px solid #e0e0f0;
+  border-right: 1px solid #f0e0e0;
 }
 .stat:last-child { border-right: none; }
 
 .stat strong {
   font-size: 1.6rem;
   font-weight: 800;
-  color: #1a1a4e;
+  color: #4e1a1a;
   line-height: 1;
 }
 
@@ -119,7 +119,7 @@
 .features h2 {
   font-size: 2rem;
   font-weight: 800;
-  color: #1a1a2e;
+  color: #2e1a1a;
   margin-bottom: 0.5rem;
 }
 
@@ -137,14 +137,14 @@
 }
 
 .card {
-  background: #f8f8fc;
-  border: 1px solid #eaeaf5;
+  background: #fcf8f8;
+  border: 1px solid #f5eaea;
   border-radius: 12px;
   padding: 1.75rem;
   transition: box-shadow 0.2s, transform 0.2s;
 }
 .card:hover {
-  box-shadow: 0 8px 24px rgba(26,26,78,0.08);
+  box-shadow: 0 8px 24px rgba(78,26,26,0.08);
   transform: translateY(-2px);
 }
 
@@ -156,7 +156,7 @@
 .card h3 {
   font-size: 1rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #2e1a1a;
   margin-bottom: 0.5rem;
 }
 
@@ -168,9 +168,9 @@
 
 /* ── Testimonials ───────────────────────────────────────────── */
 .testimonials {
-  background: #f8f8fc;
+  background: #fcf8f8;
   padding: 6rem 1.5rem;
-  border-top: 1px solid #eaeaf5;
+  border-top: 1px solid #f5eaea;
 }
 
 .testimonials-inner {
@@ -182,7 +182,7 @@
 .testimonials h2 {
   font-size: 2rem;
   font-weight: 800;
-  color: #1a1a2e;
+  color: #2e1a1a;
   margin-bottom: 3rem;
 }
 
@@ -195,7 +195,7 @@
 
 blockquote {
   background: #fff;
-  border: 1px solid #eaeaf5;
+  border: 1px solid #f5eaea;
   border-radius: 12px;
   padding: 1.75rem;
   margin: 0;
@@ -218,7 +218,7 @@ blockquote cite {
 
 /* ── CTA section ────────────────────────────────────────────── */
 .cta-section {
-  background: linear-gradient(135deg, #0f0c29, #1a1a4e);
+  background: linear-gradient(135deg, #290c0f, #4e1a1a);
   color: #fff;
   text-align: center;
   padding: 6rem 1.5rem;
