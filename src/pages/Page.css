@@ -49,13 +49,13 @@
 .btn:hover { opacity: 0.85; }
 
 .btn-primary {
-  background: #1a1a2e;
+  background: #4e1a1a;
   color: #fff;
 }
 
 .btn-secondary {
-  background: #e8e8f0;
-  color: #1a1a2e;
+  background: #f5e8e8;
+  color: #4e1a1a;
 }
 
 /* About page list */
@@ -66,13 +66,13 @@
 
 .feature-list li {
   padding: 0.5rem 0;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #f0e0e0;
   color: #333;
 }
 
 .feature-list li::before {
   content: '✓  ';
-  color: #1a1a2e;
+  color: #4e1a1a;
   font-weight: bold;
 }
 
@@ -105,6 +105,6 @@
 
 .contact-form input:focus,
 .contact-form textarea:focus {
-  outline: 2px solid #1a1a2e;
+  outline: 2px solid #4e1a1a;
   border-color: transparent;
 }
