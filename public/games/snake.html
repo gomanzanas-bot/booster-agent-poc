@@ -126,7 +126,7 @@
     // ── Constants ────────────────────────────────────────────────
     const COLS = 20;
     const ROWS = 20;
-    const CELL = 20; // each cell is 20x20px, matching the 400px canvas
+    const CELL = 20;
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -134,12 +134,11 @@
     const highScoreEl = document.getElementById('highScoreDisplay');
 
     // ── State ────────────────────────────────────────────────────
-    // game state: 'START' | 'PLAYING' | 'GAME_OVER'
-    let state = 'START';
-    let snake = [];                          // [{x, y}, ...], head is index 0
-    let food = null;                         // {x, y}
-    let currentDirection = { x: 1, y: 0 }; // initially moving RIGHT
-    let pendingDirection = { x: 1, y: 0 }; // input buffer: at most 1 queued turn
+    let state = 'START'; // 'START' | 'PLAYING' | 'GAME_OVER'
+    let snake = [];
+    let food = null;
+    let currentDirection = { x: 1, y: 0 };
+    let pendingDirection = { x: 1, y: 0 };
     let score = 0;
     let foodEaten = 0;
     let highScore = parseInt(localStorage.getItem('snake_highscore') || '0', 10);
@@ -150,14 +149,11 @@
     setInterval(() => { foodVisible = !foodVisible; }, 500);
 
     // ── Speed formula ─────────────────────────────────────────────
-    // 150ms at 0 food, steps down 10ms per 5 food eaten, floors at 60ms
     function getInterval() {
       return Math.max(60, 150 - Math.floor(foodEaten / 5) * 10);
     }
 
     // ── Food placement ──────────────────────────────────────────
-    // Picks a random cell not occupied by the snake.
-    // Returns null (and triggers game over) if the board is completely full.
     function spawnFood() {
       const occupied = new Set(snake.map(s => s.x + ',' + s.y));
       const empty = [];
@@ -167,7 +163,6 @@
         }
       }
       if (empty.length === 0) {
-        // Edge case: board full — player wins/game ends
         transitionToGameOver();
         return null;
       }
@@ -176,7 +171,6 @@
 
     // ── Game initialisation ──────────────────────────────────────
     function initGame() {
-      // Snake starts at centre: head (10,10), body (9,10), (8,10) — 3 cells, direction RIGHT
       snake = [
         { x: 10, y: 10 },
         { x: 9,  y: 10 },
@@ -202,7 +196,6 @@
       state = 'GAME_OVER';
       clearInterval(gameTimer);
       gameTimer = null;
-      // Persist high score
       if (score > highScore) {
         highScore = score;
         localStorage.setItem('snake_highscore', String(highScore));
@@ -211,27 +204,26 @@
       renderGameOver();
     }
 
-    // ── Game tick (runs on setInterval) ─────────────────────────
+    // ── Game tick ────────────────────────────────────────────────
     function gameTick() {
       if (state !== 'PLAYING') return;
 
-      // 1. Flush the buffered direction
+      // 1. Flush buffered direction
       currentDirection = pendingDirection;
 
-      // 2. Compute new head position
+      // 2. Compute raw new head position
       const head = snake[0];
-      const newHead = {
+      let newHead = {
         x: head.x + currentDirection.x,
         y: head.y + currentDirection.y,
       };
 
-      // 3. Wall collision check — no wrapping
-      if (newHead.x < 0 || newHead.x >= COLS || newHead.y < 0 || newHead.y >= ROWS) {
-        transitionToGameOver();
-        return;
-      }
+      // 3. Wrap boundaries — crossing an edge reappears on the opposite side.
+      //    The double-modulo handles negative values correctly in JS.
+      newHead.x = ((newHead.x % COLS) + COLS) % COLS;
+      newHead.y = ((newHead.y % ROWS) + ROWS) % ROWS;
 
-      // 4. Self-collision check
+      // 4. Self-collision check (wall no longer kills)
       for (const seg of snake) {
         if (seg.x === newHead.x && seg.y === newHead.y) {
           transitionToGameOver();
@@ -244,7 +236,6 @@
 
       // 6. Food check
       if (food && newHead.x === food.x && newHead.y === food.y) {
-        // Ate food: grow (no tail pop), update score, respawn food, maybe speed up
         score += 10;
         foodEaten += 1;
         scoreEl.textContent = String(score);
@@ -252,65 +243,54 @@
         const prevInterval = Math.max(60, 150 - Math.floor((foodEaten - 1) / 5) * 10);
         const newInterval = getInterval();
         if (newInterval !== prevInterval) {
-          // Speed changed — restart the timer at the new rate
           clearInterval(gameTimer);
           gameTimer = setInterval(gameTick, newInterval);
         }
 
-        food = spawnFood(); // spawnFood handles board-full edge case
+        food = spawnFood();
       } else {
-        // No food eaten — remove tail to keep length constant
         snake.pop();
       }
 
-      // 7. Draw the updated frame
+      // 7. Draw
       render();
     }
 
-    // ── Render: normal game frame ──────────────────────────────
+    // ── Render: game frame ────────────────────────────────────
     function render() {
-      // Clear canvas
       ctx.fillStyle = '#0d0d1a';
       ctx.fillRect(0, 0, 400, 400);
 
-      // Subtle grid lines
+      // Grid lines
       ctx.strokeStyle = '#1a1a2e';
       ctx.lineWidth = 0.5;
       for (let x = 0; x <= COLS; x++) {
-        ctx.beginPath();
-        ctx.moveTo(x * CELL, 0);
-        ctx.lineTo(x * CELL, 400);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x * CELL, 0); ctx.lineTo(x * CELL, 400); ctx.stroke();
       }
       for (let y = 0; y <= ROWS; y++) {
-        ctx.beginPath();
-        ctx.moveTo(0, y * CELL);
-        ctx.lineTo(400, y * CELL);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, y * CELL); ctx.lineTo(400, y * CELL); ctx.stroke();
       }
 
-      // Food — only drawn when foodVisible (blink)
+      // Food
       if (foodVisible && food) {
         ctx.shadowBlur = 0;
         ctx.fillStyle = '#ffff00';
         ctx.fillRect(food.x * CELL + 3, food.y * CELL + 3, 14, 14);
       }
 
-      // Snake body (all segments except head)
+      // Snake body
       ctx.shadowBlur = 0;
       ctx.fillStyle = '#1a8a0a';
       for (let i = 1; i < snake.length; i++) {
-        const seg = snake[i];
-        ctx.fillRect(seg.x * CELL + 1, seg.y * CELL + 1, 18, 18);
+        ctx.fillRect(snake[i].x * CELL + 1, snake[i].y * CELL + 1, 18, 18);
       }
 
-      // Snake head — brighter green with a neon glow
+      // Snake head with glow
       const head = snake[0];
       ctx.shadowBlur = 8;
       ctx.shadowColor = '#39ff14';
       ctx.fillStyle = '#39ff14';
       ctx.fillRect(head.x * CELL + 1, head.y * CELL + 1, 18, 18);
-      // Always reset shadow after use to avoid bleeding onto other draws
       ctx.shadowBlur = 0;
       ctx.shadowColor = 'transparent';
     }
@@ -320,12 +300,10 @@
       ctx.fillStyle = '#0d0d1a';
       ctx.fillRect(0, 0, 400, 400);
 
-      // Static 3-cell snake stub at centre
       ctx.shadowBlur = 0;
       ctx.fillStyle = '#1a8a0a';
       ctx.fillRect(9 * CELL + 1, 10 * CELL + 1, 18, 18);
       ctx.fillRect(8 * CELL + 1, 10 * CELL + 1, 18, 18);
-
       ctx.shadowBlur = 8;
       ctx.shadowColor = '#39ff14';
       ctx.fillStyle = '#39ff14';
@@ -333,7 +311,6 @@
       ctx.shadowBlur = 0;
       ctx.shadowColor = 'transparent';
 
-      // Game title
       ctx.fillStyle = '#39ff14';
       ctx.shadowBlur = 12;
       ctx.shadowColor = '#39ff14';
@@ -343,15 +320,12 @@
       ctx.shadowBlur = 0;
       ctx.shadowColor = 'transparent';
 
-      // Prompt
       ctx.fillStyle = '#e8e8ff';
       ctx.font = '8px "Press Start 2P", cursive';
-      ctx.textAlign = 'center';
       ctx.fillText('PRESS ENTER TO START', 200, 240);
     }
 
     // ── Render: GAME OVER overlay ────────────────────────────
-    // Drawn on top of the final frozen game frame.
     function renderGameOver() {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
       ctx.fillRect(0, 0, 400, 400);
@@ -376,53 +350,32 @@
 
     // ── Keyboard input ──────────────────────────────────────────
     document.addEventListener('keydown', (e) => {
-      // Prevent arrow keys and space from scrolling the page
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         e.preventDefault();
       }
 
       if (state === 'START' || state === 'GAME_OVER') {
-        if (e.key === 'Enter' || e.key === ' ') {
-          transitionToPlaying();
-        }
+        if (e.key === 'Enter' || e.key === ' ') transitionToPlaying();
         return;
       }
 
       if (state === 'PLAYING') {
-        // Validate against pendingDirection (not currentDirection) to allow
-        // queuing the next turn before the current tick fires, while still
-        // blocking a 180° reversal.
         switch (e.key) {
-          case 'ArrowUp':
-          case 'w': case 'W':
-            if (pendingDirection.y !== 1) pendingDirection = { x: 0, y: -1 };
-            break;
-          case 'ArrowDown':
-          case 's': case 'S':
-            if (pendingDirection.y !== -1) pendingDirection = { x: 0, y: 1 };
-            break;
-          case 'ArrowLeft':
-          case 'a': case 'A':
-            if (pendingDirection.x !== 1) pendingDirection = { x: -1, y: 0 };
-            break;
-          case 'ArrowRight':
-          case 'd': case 'D':
-            if (pendingDirection.x !== -1) pendingDirection = { x: 1, y: 0 };
-            break;
+          case 'ArrowUp':    case 'w': case 'W':
+            if (pendingDirection.y !== 1)  pendingDirection = { x: 0, y: -1 }; break;
+          case 'ArrowDown':  case 's': case 'S':
+            if (pendingDirection.y !== -1) pendingDirection = { x: 0, y:  1 }; break;
+          case 'ArrowLeft':  case 'a': case 'A':
+            if (pendingDirection.x !== 1)  pendingDirection = { x: -1, y: 0 }; break;
+          case 'ArrowRight': case 'd': case 'D':
+            if (pendingDirection.x !== -1) pendingDirection = { x:  1, y: 0 }; break;
         }
       }
     });
 
     // ── Bootstrap ───────────────────────────────────────────────
-    // Populate UI bar with persisted high score
     highScoreEl.textContent = String(highScore);
-
-    // Wait for the web font to be available before using it on the canvas.
-    // Canvas ignores CSS font-face loading — it only sees fonts that the
-    // browser has already parsed and decoded.
-    document.fonts.ready.then(() => {
-      renderStart();
-    });
+    document.fonts.ready.then(() => { renderStart(); });
   </script>
 </body>
 </html>
