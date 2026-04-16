@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BREAKOUT — ARCADE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Design tokens (shared across all game pages) ────────── */
+    :root {
+      --bg:           #0a0a0f;
+      --canvas-bg:    #0d0d1a;
+      --card-bg:      #12122a;
+      --border:       #2a2a4a;
+      --neon-green:   #39ff14;
+      --neon-cyan:    #00f5ff;
+      --neon-magenta: #ff00ff;
+      --neon-yellow:  #ffff00;
+      --neon-orange:  #ff8c00;
+      --neon-red:     #ff4444;
+      --text:         #e8e8ff;
+      --text-dim:     #6666aa;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Press Start 2P', cursive;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    /* Scanline overlay — decorative atmosphere, doesn't block input */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 1000;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent, transparent 2px,
+        rgba(0, 0, 0, 0.12) 2px, rgba(0, 0, 0, 0.12) 4px
+      );
+    }
+
+    /* Back link — fixed top-left, consistent across all game pages */
+    .back-link {
+      position: fixed;
+      top: 12px; left: 16px;
+      font-size: 0.5rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      z-index: 1001;
+    }
+    .back-link:hover { color: var(--text); }
+
+    /* Score/lives bar — sits directly above the canvas */
+    .ui-bar {
+      width: 480px;
+      height: 40px;
+      background: var(--card-bg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 0.6rem;
+    }
+    .ui-bar .label { color: var(--text-dim); }
+    .ui-bar .value { color: var(--text); }
+
+    /* Canvas */
+    #gameCanvas {
+      display: block;
+      border: 2px solid var(--border);
+      background: var(--canvas-bg);
+      cursor: none; /* hide cursor while it's over the canvas */
+    }
+    #gameCanvas:focus { outline: none; }
+  </style>
+</head>
+<body>
+
+  <a class="back-link" href="../index.html">← HOME</a>
+
+  <div class="ui-bar">
+    <div>
+      <span class="label">SCORE </span>
+      <span class="value" id="scoreDisplay">0</span>
+    </div>
+    <div>
+      <span class="label">BEST </span>
+      <span class="value" id="highScoreDisplay">0</span>
+    </div>
+    <div>
+      <span class="label">LIVES </span>
+      <span class="value" id="livesDisplay">3</span>
+    </div>
+  </div>
+
+  <canvas id="gameCanvas" width="480" height="640" tabindex="0"></canvas>
+
+  <script>
+    // ── Canvas & UI refs ────────────────────────────────────────
+    const canvas    = document.getElementById('gameCanvas');
+    const ctx       = canvas.getContext('2d');
+    const scoreEl   = document.getElementById('scoreDisplay');
+    const highScoreEl = document.getElementById('highScoreDisplay');
+    const livesEl   = document.getElementById('livesDisplay');
+
+    // ── Constants ────────────────────────────────────────────────
+    const W = 480, H = 640;
+
+    // Paddle
+    const PAD_W = 80, PAD_H = 12, PAD_Y = 608, PAD_SPEED = 5;
+
+    // Ball
+    const BALL_R    = 8;
+    const BALL_DX0  = 4;    // initial horizontal velocity
+    const BALL_DY0  = -5;   // initial vertical velocity (upward)
+
+    // Brick grid — 8 cols × 6 rows
+    const BRICK_COLS  = 8,  BRICK_ROWS  = 6;
+    const BRICK_W     = 52, BRICK_H     = 20;
+    const BRICK_GAP_X = 4,  BRICK_GAP_Y = 6;
+    const BRICK_LEFT  = 18, BRICK_TOP   = 80;
+
+    // Row 0 (top) → row 5 (bottom): colors, glow colors, point values
+    const ROW_COLORS  = ['#ff00ff','#ff4444','#ff8c00','#ffff00','#39ff14','#00f5ff'];
+    const ROW_POINTS  = [60, 50, 40, 30, 20, 10];
+
+    // Speed escalation
+    const SPEED_STEP   = 5;    // scale every N bricks destroyed
+    const SPEED_FACTOR = 1.06; // multiply speed by this each step
+    const SPEED_MAX    = 9.6;  // hard cap in px/frame
+
+    // ── Game state ────────────────────────────────────────────────
+    // Possible states: START | READY | PLAYING | PAUSED | LIFE_LOST | GAME_OVER | WIN
+    let gameState;
+    let padX;
+    let ballX, ballY, ballDX, ballDY;
+    let bricks;         // [{ row, col, alive, flash }]
+    let score, lives, bricksDestroyed;
+    let highScore = parseInt(localStorage.getItem('breakout_highscore') || '0', 10);
+    let lifeLostTimer = null;
+    let keys = {};      // currently held keyboard keys
+
+    // ── Brick helpers ─────────────────────────────────────────────
+    function brickRect(row, col) {
+      return {
+        x: BRICK_LEFT + col * (BRICK_W + BRICK_GAP_X),
+        y: BRICK_TOP  + row * (BRICK_H + BRICK_GAP_Y),
+        w: BRICK_W,
+        h: BRICK_H,
+      };
+    }
+
+    function buildBricks() {
+      const arr = [];
+      for (let r = 0; r < BRICK_ROWS; r++) {
+        for (let c = 0; c < BRICK_COLS; c++) {
+          arr.push({ row: r, col: c, alive: true, flash: 0 });
+        }
+      }
+      return arr;
+    }
+
+    // ── Init / reset helpers ──────────────────────────────────────
+    function initGame() {
+      score          = 0;
+      lives          = 3;
+      bricksDestroyed = 0;
+      bricks         = buildBricks();
+      scoreEl.textContent  = '0';
+      livesEl.textContent  = '3';
+      resetBallAndPaddle();
+    }
+
+    // Place paddle and ball at their start positions
+    function resetBallAndPaddle() {
+      padX  = (W - PAD_W) / 2;            // paddle centred horizontally
+      ballX = padX + PAD_W / 2;           // ball above paddle centre
+      ballY = PAD_Y - BALL_R;
+      ballDX = BALL_DX0;
+      ballDY = BALL_DY0;
+    }
+
+    // ── Speed escalation ──────────────────────────────────────────
+    // Called after each brick destruction; scales if we've hit a milestone
+    function applySpeedEscalation() {
+      if (bricksDestroyed % SPEED_STEP !== 0) return;
+      const speed    = Math.hypot(ballDX, ballDY);
+      const newSpeed = Math.min(speed * SPEED_FACTOR, SPEED_MAX);
+      if (newSpeed === speed) return; // already at cap
+      const ratio = newSpeed / speed;
+      ballDX *= ratio;
+      ballDY *= ratio;
+    }
+
+    // ── State transitions ─────────────────────────────────────────
+    function toStart()   { gameState = 'START'; }
+
+    function toReady()   {
+      gameState = 'READY';
+      resetBallAndPaddle();
+    }
+
+    function toPlaying() { gameState = 'PLAYING'; }
+
+    function toPaused()  { gameState = 'PAUSED'; }
+
+    function toLifeLost() {
+      gameState = 'LIFE_LOST';
+      clearTimeout(lifeLostTimer);
+      lives--;
+      livesEl.textContent = String(lives);
+      saveHighScore();
+      // After 1200ms, continue to READY or GAME_OVER
+      lifeLostTimer = setTimeout(() => {
+        if (lives <= 0) toGameOver();
+        else toReady();
+      }, 1200);
+    }
+
+    function toGameOver() {
+      gameState = 'GAME_OVER';
+      saveHighScore();
+    }
+
+    function toWin() {
+      gameState = 'WIN';
+      saveHighScore();
+    }
+
+    function saveHighScore() {
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('breakout_highscore', String(highScore));
+        highScoreEl.textContent = String(highScore);
+      }
+    }
+
+    // ── Physics update (called every frame while PLAYING) ─────────
+    function updateGame() {
+      // 1. Paddle keyboard movement (arrow keys held)
+      if (keys['ArrowLeft']  || keys['a'] || keys['A'])
+        padX = Math.max(0, padX - PAD_SPEED);
+      if (keys['ArrowRight'] || keys['d'] || keys['D'])
+        padX = Math.min(W - PAD_W, padX + PAD_SPEED);
+
+      // 2. Move ball
+      ballX += ballDX;
+      ballY += ballDY;
+
+      // 3. Side-wall bounces
+      if (ballX - BALL_R < 0) { ballX = BALL_R;      ballDX =  Math.abs(ballDX); }
+      if (ballX + BALL_R > W) { ballX = W - BALL_R;  ballDX = -Math.abs(ballDX); }
+
+      // 4. Ceiling bounce
+      if (ballY - BALL_R < 0) { ballY = BALL_R;      ballDY =  Math.abs(ballDY); }
+
+      // 5. Bottom edge — ball is lost
+      if (ballY + BALL_R > H) { toLifeLost(); return; }
+
+      // 6. Paddle collision — angle reflects based on where ball hits the paddle
+      if (
+        ballDY > 0 &&
+        ballY + BALL_R >= PAD_Y &&
+        ballY - BALL_R <= PAD_Y + PAD_H &&
+        ballX >= padX - BALL_R &&
+        ballX <= padX + PAD_W + BALL_R
+      ) {
+        // hitPos: -1 = left edge, 0 = centre, +1 = right edge
+        const hitPos = (ballX - (padX + PAD_W / 2)) / (PAD_W / 2);
+        const speed  = Math.hypot(ballDX, ballDY);
+        const angle  = hitPos * (Math.PI / 3); // max ±60° from vertical
+        ballDX = speed * Math.sin(angle);
+        ballDY = -Math.abs(speed * Math.cos(angle));
+        ballY  = PAD_Y - BALL_R; // prevent tunnelling
+      }
+
+      // 7. Advance brick flash timers BEFORE new collision detection.
+      //    This ensures newly hit bricks always show all 3 flash frames.
+      for (const b of bricks) {
+        if (b.flash > 0) {
+          b.flash--;
+          if (b.flash === 0) b.alive = false; // flash done — remove brick
+        }
+      }
+
+      // 8. Brick collision detection
+      for (const b of bricks) {
+        if (!b.alive || b.flash > 0) continue; // skip dead or flashing bricks
+
+        const r = brickRect(b.row, b.col);
+        if (
+          ballX + BALL_R > r.x && ballX - BALL_R < r.x + r.w &&
+          ballY + BALL_R > r.y && ballY - BALL_R < r.y + r.h
+        ) {
+          // Determine which axis to reflect on by comparing overlap depths
+          const overlapL = (ballX + BALL_R) - r.x;
+          const overlapR = (r.x + r.w) - (ballX - BALL_R);
+          const overlapT = (ballY + BALL_R) - r.y;
+          const overlapB = (r.y + r.h) - (ballY - BALL_R);
+          const minH = Math.min(overlapL, overlapR);
+          const minV = Math.min(overlapT, overlapB);
+
+          if (minH < minV) ballDX = -ballDX; // hit a side
+          else             ballDY = -ballDY; // hit top or bottom
+
+          // Start 3-frame white flash before removal
+          b.flash = 3;
+
+          // Update score and speed
+          score += ROW_POINTS[b.row];
+          scoreEl.textContent = String(score);
+          bricksDestroyed++;
+          applySpeedEscalation();
+
+          break; // only one brick per frame
+        }
+      }
+
+      // 9. Win condition: all bricks dead and none still flashing
+      if (bricks.every(b => !b.alive && b.flash === 0)) { toWin(); }
+    }
+
+    // ── Draw helpers ──────────────────────────────────────────────
+    function clearCanvas() {
+      ctx.fillStyle = '#0d0d1a';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function drawBricks() {
+      for (const b of bricks) {
+        if (!b.alive && b.flash === 0) continue;
+        const r     = brickRect(b.row, b.col);
+        const color = b.flash > 0 ? '#ffffff' : ROW_COLORS[b.row];
+        const glow  = b.flash > 0 ? '#ffffff' : ROW_COLORS[b.row];
+        ctx.shadowBlur  = b.flash > 0 ? 18 : 6;
+        ctx.shadowColor = glow;
+        ctx.fillStyle   = color;
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+      }
+      ctx.shadowBlur  = 0;
+      ctx.shadowColor = 'transparent';
+    }
+
+    function drawPaddle() {
+      ctx.shadowBlur  = 12;
+      ctx.shadowColor = '#ff8c00';
+      ctx.fillStyle   = '#ff8c00';
+      ctx.fillRect(padX, PAD_Y, PAD_W, PAD_H);
+      ctx.shadowBlur  = 0;
+      ctx.shadowColor = 'transparent';
+    }
+
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, BALL_R, 0, Math.PI * 2);
+      ctx.shadowBlur  = 14;
+      ctx.shadowColor = '#ffffff';
+      ctx.fillStyle   = '#ffffff';
+      ctx.fill();
+      ctx.shadowBlur  = 0;
+      ctx.shadowColor = 'transparent';
+    }
+
+    function drawText(text, x, y, size, color, glow) {
+      ctx.textAlign = 'center';
+      ctx.font      = `${size}px "Press Start 2P", cursive`;
+      ctx.fillStyle = color;
+      if (glow) { ctx.shadowBlur = 12; ctx.shadowColor = glow; }
+      ctx.fillText(text, x, y);
+      ctx.shadowBlur  = 0;
+      ctx.shadowColor = 'transparent';
+    }
+
+    // ── Main render ───────────────────────────────────────────────
+    function render() {
+      clearCanvas();
+
+      if (gameState === 'START') {
+        drawText('BREAKOUT', W / 2, H / 2 - 70, 22, '#ff8c00', '#ff8c00');
+        drawText('PRESS ENTER TO START', W / 2, H / 2, 8, '#e8e8ff', null);
+        drawText('MOUSE OR ARROWS — MOVE PADDLE', W / 2, H / 2 + 48, 6, '#6666aa', null);
+        drawText('SPACE — LAUNCH  ·  P — PAUSE', W / 2, H / 2 + 70, 6, '#6666aa', null);
+        return;
+      }
+
+      // All in-game states draw bricks and paddle
+      drawBricks();
+      drawPaddle();
+
+      // Ball is visible in every state except LIFE_LOST (it's gone)
+      if (gameState !== 'LIFE_LOST') drawBall();
+
+      if (gameState === 'READY') {
+        drawText('PRESS SPACE TO LAUNCH', W / 2, H / 2 + 30, 7, '#e8e8ff', null);
+        drawText('CLICK TO LAUNCH', W / 2, H / 2 + 54, 6, '#6666aa', null);
+      }
+
+      if (gameState === 'PAUSED') {
+        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        ctx.fillRect(0, 0, W, H);
+        drawText('PAUSED', W / 2, H / 2 - 10, 22, '#ffff00', '#ffff00');
+        drawText('PRESS P TO RESUME', W / 2, H / 2 + 36, 8, '#6666aa', null);
+      }
+
+      if (gameState === 'LIFE_LOST') {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, 0, W, H);
+        const msg = lives > 0
+          ? `${lives} ${lives === 1 ? 'LIFE' : 'LIVES'} LEFT`
+          : 'NO LIVES LEFT';
+        drawText(msg, W / 2, H / 2, 13, '#ff4444', '#ff4444');
+      }
+
+      if (gameState === 'GAME_OVER') {
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        ctx.fillRect(0, 0, W, H);
+        drawText('GAME OVER', W / 2, H / 2 - 50, 18, '#ff4444', '#ff4444');
+        drawText('SCORE: ' + score, W / 2, H / 2 + 4, 10, '#e8e8ff', null);
+        drawText('PRESS ENTER TO RESTART', W / 2, H / 2 + 56, 7, '#6666aa', null);
+      }
+
+      if (gameState === 'WIN') {
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        ctx.fillRect(0, 0, W, H);
+        drawText('YOU WIN!', W / 2, H / 2 - 50, 22, '#39ff14', '#39ff14');
+        drawText('SCORE: ' + score, W / 2, H / 2 + 4, 10, '#e8e8ff', null);
+        drawText('PRESS ENTER TO PLAY AGAIN', W / 2, H / 2 + 56, 7, '#6666aa', null);
+      }
+    }
+
+    // ── Game loop (requestAnimationFrame) ─────────────────────────
+    function loop() {
+      if (gameState === 'PLAYING') {
+        updateGame();
+      } else if (gameState === 'READY') {
+        // In READY, paddle still moves and ball follows it
+        if (keys['ArrowLeft']  || keys['a'] || keys['A'])
+          padX = Math.max(0, padX - PAD_SPEED);
+        if (keys['ArrowRight'] || keys['d'] || keys['D'])
+          padX = Math.min(W - PAD_W, padX + PAD_SPEED);
+        ballX = padX + PAD_W / 2;
+        ballY = PAD_Y - BALL_R;
+      }
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    // ── Keyboard input ────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+      if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key))
+        e.preventDefault();
+
+      keys[e.key] = true;
+
+      if (gameState === 'START' || gameState === 'GAME_OVER' || gameState === 'WIN') {
+        if (e.key === 'Enter') { initGame(); toReady(); }
+        return;
+      }
+      if (gameState === 'READY') {
+        if (e.key === ' ') toPlaying();
+        return;
+      }
+      if (gameState === 'PLAYING') {
+        if (e.key === 'p' || e.key === 'P') toPaused();
+        return;
+      }
+      if (gameState === 'PAUSED') {
+        if (e.key === 'p' || e.key === 'P') toPlaying();
+        return;
+      }
+    });
+
+    document.addEventListener('keyup', (e) => { delete keys[e.key]; });
+
+    // ── Mouse input — paddle follows cursor X ─────────────────────
+    canvas.addEventListener('mousemove', (e) => {
+      if (gameState !== 'PLAYING' && gameState !== 'READY') return;
+      const rect   = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      const mx     = (e.clientX - rect.left) * scaleX;
+      padX = Math.max(0, Math.min(W - PAD_W, mx - PAD_W / 2));
+      // In READY, ball tracks paddle
+      if (gameState === 'READY') ballX = padX + PAD_W / 2;
+    });
+
+    // Click on canvas in READY launches ball (mouse alternative to Space)
+    canvas.addEventListener('click', () => {
+      if (gameState === 'READY') toPlaying();
+    });
+
+    // ── Bootstrap ─────────────────────────────────────────────────
+    highScoreEl.textContent = String(highScore);
+    toStart();
+    // Wait for Press Start 2P to load before starting the rAF loop,
+    // otherwise canvas text rendering can be off by a frame.
+    document.fonts.ready.then(() => {
+      canvas.focus();
+      requestAnimationFrame(loop);
+    });
+  </script>
+</body>
+</html>
