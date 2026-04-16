@@ -150,6 +150,46 @@
       color: #0a0a0f;
     }
 
+    /* ── Coming Soon cards ──────────────────────────────────── */
+    /* The thumbnail content is visually muted; an overlay badge sits on top */
+    .game-card.coming-soon .card-thumbnail {
+      position: relative; /* needed so the banner overlay can be positioned inside */
+    }
+
+    /* Full-cover "COMING SOON" overlay on the thumbnail */
+    .coming-soon-banner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.45rem;
+      letter-spacing: 2px;
+      color: #8888bb;
+      background: rgba(10, 10, 15, 0.82);
+      border-radius: 2px;
+    }
+
+    /* Mute title and description text */
+    .game-card.coming-soon h2,
+    .game-card.coming-soon p {
+      opacity: 0.35;
+    }
+
+    /* Remove the hover glow for coming-soon cards */
+    .game-card.coming-soon:hover {
+      border-color: var(--border);
+      box-shadow: none;
+    }
+
+    /* Disabled PLAY button — greyed out, not clickable */
+    .btn-play.disabled {
+      border-color: #2a2a4a;
+      color: #3a3a5a;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
     /* ── Footer ─────────────────────────────────────────────── */
     footer {
       padding: 32px 24px;
@@ -210,7 +250,7 @@
           <a href="games/2048.html" class="btn-play">PLAY</a>
         </article>
 
-        <!-- Breakout -->
+        <!-- Breakout — live -->
         <article class="game-card">
           <div class="card-thumbnail" style="background: rgba(255,140,0,0.12); border: 1px solid #ff8c00; color: #ff8c00; text-shadow: 0 0 12px #ff8c00;">
             BRK
@@ -220,24 +260,26 @@
           <a href="games/breakout.html" class="btn-play">PLAY</a>
         </article>
 
-        <!-- Space Invaders -->
-        <article class="game-card">
-          <div class="card-thumbnail" style="background: rgba(255,0,255,0.12); border: 1px solid #ff00ff; color: #ff00ff; text-shadow: 0 0 12px #ff00ff;">
+        <!-- Space Invaders — not yet implemented -->
+        <article class="game-card coming-soon">
+          <div class="card-thumbnail" style="background: rgba(255,0,255,0.04); border: 1px solid #2a0a2a; color: #220022; text-shadow: none;">
             INV
+            <div class="coming-soon-banner">COMING SOON</div>
           </div>
           <h2>INVADERS</h2>
           <p>Defend the planet.</p>
-          <a href="games/space-invaders.html" class="btn-play">PLAY</a>
+          <span class="btn-play disabled">PLAY</span>
         </article>
 
-        <!-- Tetris -->
-        <article class="game-card">
-          <div class="card-thumbnail" style="background: rgba(255,255,0,0.12); border: 1px solid #ffff00; color: #ffff00; text-shadow: 0 0 12px #ffff00;">
+        <!-- Tetris — not yet implemented -->
+        <article class="game-card coming-soon">
+          <div class="card-thumbnail" style="background: rgba(255,255,0,0.04); border: 1px solid #2a2a0a; color: #222200; text-shadow: none;">
             TET
+            <div class="coming-soon-banner">COMING SOON</div>
           </div>
           <h2>TETRIS</h2>
           <p>Stack. Clear. Repeat.</p>
-          <a href="games/tetris.html" class="btn-play">PLAY</a>
+          <span class="btn-play disabled">PLAY</span>
         </article>
 
         <!-- Frogger -->
