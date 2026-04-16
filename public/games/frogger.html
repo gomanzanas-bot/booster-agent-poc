@@ -149,8 +149,8 @@
       frog.y = ny;
       frogOnLog = null; // collision check will reassign
 
-      // Stepped off top → goal check
-      if (frog.y < CELL / 2) checkGoal();
+      // Stepped into goal row: fire on first entry (dy<0 guards left/right moves in row 0)
+      if (dy < 0 && frog.y <= CELL / 2) checkGoal();
     }
 
     // ── Input: keyboard ──────────────────────────────────────
