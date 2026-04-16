@@ -1,12 +1,263 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GoManzanas</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARCADE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Design tokens ──────────────────────────────────────── */
+    :root {
+      --bg:           #0a0a0f;
+      --canvas-bg:    #0d0d1a;
+      --card-bg:      #12122a;
+      --border:       #2a2a4a;
+      --neon-green:   #39ff14;
+      --neon-cyan:    #00f5ff;
+      --neon-magenta: #ff00ff;
+      --neon-yellow:  #ffff00;
+      --neon-orange:  #ff8c00;
+      --neon-red:     #ff4444;
+      --text:         #e8e8ff;
+      --text-dim:     #6666aa;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Press Start 2P', cursive;
+      margin: 0;
+    }
+
+    /* Scanline overlay — purely decorative, doesn't block clicks */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1000;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.12) 2px,
+        rgba(0, 0, 0, 0.12) 4px
+      );
+    }
+
+    /* ── Layout wrapper ─────────────────────────────────────── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      padding: 48px 24px 32px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      color: var(--neon-green);
+      text-shadow: 0 0 20px #39ff14, 0 0 40px #39ff14;
+      margin-bottom: 16px;
+    }
+
+    header p {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      letter-spacing: 3px;
+    }
+
+    /* ── Card grid ──────────────────────────────────────────── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      padding: 24px 0;
+    }
+
+    /* Center the 5th card in the 3-column desktop layout */
+    .game-card:last-child {
+      grid-column: 2;
+    }
+
+    /* ── Game card ──────────────────────────────────────────── */
+    .game-card {
+      background: var(--card-bg);
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 200ms, box-shadow 200ms;
+    }
+
+    .game-card:hover {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 16px rgba(0, 245, 255, 0.25);
+    }
+
+    /* Thumbnail — colored block with abbreviated game name */
+    .card-thumbnail {
+      height: 140px;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+
+    .game-card h2 {
+      font-size: 0.75rem;
+      color: var(--text);
+      margin: 0;
+    }
+
+    .game-card p {
+      font-size: 0.5rem;
+      color: var(--text-dim);
+      margin: 0;
+    }
+
+    /* PLAY button */
+    .btn-play {
+      display: inline-block;
+      padding: 12px 24px;
+      border: 2px solid var(--neon-green);
+      background: transparent;
+      color: var(--neon-green);
+      cursor: pointer;
+      text-decoration: none;
+      font-family: inherit;
+      font-size: 0.6rem;
+      margin-top: auto;
+      text-align: center;
+      transition: background 150ms, color 150ms;
+    }
+
+    .btn-play:hover {
+      background: var(--neon-green);
+      color: #0a0a0f;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    footer {
+      padding: 32px 24px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.45rem;
+    }
+
+    /* ── Responsive breakpoints ─────────────────────────────── */
+    /* Tablet: 2 columns */
+    @media (max-width: 767px) and (min-width: 480px) {
+      .card-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .game-card:last-child {
+        grid-column: auto;
+      }
+    }
+
+    /* Mobile: 1 column */
+    @media (max-width: 479px) {
+      header h1 {
+        font-size: 1.5rem;
+      }
+      .card-grid {
+        grid-template-columns: 1fr;
+      }
+      .game-card:last-child {
+        grid-column: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container">
+      <h1>ARCADE</h1>
+      <p>SELECT YOUR GAME</p>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="card-grid">
+
+        <!-- Snake -->
+        <article class="game-card">
+          <div class="card-thumbnail" style="background: rgba(57,255,20,0.12); border: 1px solid #39ff14; color: #39ff14; text-shadow: 0 0 12px #39ff14;">
+            SNK
+          </div>
+          <h2>SNAKE</h2>
+          <p>Eat. Grow. Survive.</p>
+          <a href="games/snake.html" class="btn-play">PLAY</a>
+        </article>
+
+        <!-- 2048 -->
+        <article class="game-card">
+          <div class="card-thumbnail" style="background: rgba(0,245,255,0.12); border: 1px solid #00f5ff; color: #00f5ff; text-shadow: 0 0 12px #00f5ff;">
+            2048
+          </div>
+          <h2>2048</h2>
+          <p>Slide to conquer.</p>
+          <a href="games/2048.html" class="btn-play">PLAY</a>
+        </article>
+
+        <!-- Breakout -->
+        <article class="game-card">
+          <div class="card-thumbnail" style="background: rgba(255,140,0,0.12); border: 1px solid #ff8c00; color: #ff8c00; text-shadow: 0 0 12px #ff8c00;">
+            BRK
+          </div>
+          <h2>BREAKOUT</h2>
+          <p>Break every brick.</p>
+          <a href="games/breakout.html" class="btn-play">PLAY</a>
+        </article>
+
+        <!-- Space Invaders -->
+        <article class="game-card">
+          <div class="card-thumbnail" style="background: rgba(255,0,255,0.12); border: 1px solid #ff00ff; color: #ff00ff; text-shadow: 0 0 12px #ff00ff;">
+            INV
+          </div>
+          <h2>INVADERS</h2>
+          <p>Defend the planet.</p>
+          <a href="games/space-invaders.html" class="btn-play">PLAY</a>
+        </article>
+
+        <!-- Tetris -->
+        <article class="game-card">
+          <div class="card-thumbnail" style="background: rgba(255,255,0,0.12); border: 1px solid #ffff00; color: #ffff00; text-shadow: 0 0 12px #ffff00;">
+            TET
+          </div>
+          <h2>TETRIS</h2>
+          <p>Stack. Clear. Repeat.</p>
+          <a href="games/tetris.html" class="btn-play">PLAY</a>
+        </article>
+
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 ARCADE</p>
+  </footer>
+
+</body>
 </html>
