@@ -3,26 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ARCADE</title>
+  <title>Growing Up 2040</title>
+  <meta name="description" content="A choose-your-own-adventure for Bay Area parents of today's sixth graders. Five decisions. Fourteen years. One future." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
-    /* ── Design tokens ──────────────────────────────────────── */
     :root {
-      --bg:           #0a0a0f;
-      --canvas-bg:    #0d0d1a;
-      --card-bg:      #12122a;
-      --border:       #2a2a4a;
-      --neon-green:   #39ff14;
-      --neon-cyan:    #00f5ff;
-      --neon-magenta: #ff00ff;
-      --neon-yellow:  #ffff00;
-      --neon-orange:  #ff8c00;
-      --neon-red:     #ff4444;
-      --neon-lime:    #00ff88;
-      --text:         #e8e8ff;
-      --text-dim:     #6666aa;
+      --bg:          #07091a;
+      --bg-card:     rgba(15, 20, 45, 0.85);
+      --blue:        #3b82f6;
+      --blue-light:  #60a5fa;
+      --amber:       #f59e0b;
+      --text:        #dde4f0;
+      --text-dim:    #5a6888;
+      --border:      rgba(59, 130, 246, 0.18);
+      --border-dim:  rgba(255, 255, 255, 0.06);
     }
 
     *, *::before, *::after {
@@ -31,274 +27,505 @@
       padding: 0;
     }
 
+    html { scroll-behavior: smooth; }
+
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Press Start 2P', cursive;
-      margin: 0;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
 
-    /* Scanline overlay — purely decorative, doesn't block clicks */
+    /* Subtle perspective grid */
     body::before {
       content: '';
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       pointer-events: none;
-      z-index: 1000;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.12) 2px,
-        rgba(0, 0, 0, 0.12) 4px
-      );
+      background-image:
+        linear-gradient(rgba(59, 130, 246, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.04) 1px, transparent 1px);
+      background-size: 64px 64px;
+      z-index: 0;
     }
 
-    /* ── Layout wrapper ─────────────────────────────────────── */
+    /* Soft blue radial glow above the fold */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -20vh;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90vw;
+      height: 80vh;
+      background: radial-gradient(ellipse at center, rgba(59, 130, 246, 0.09) 0%, transparent 68%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ── */
     .container {
-      max-width: 1100px;
+      max-width: 960px;
       margin: 0 auto;
-      padding: 0 24px;
+      padding: 0 32px;
+      position: relative;
+      z-index: 1;
     }
 
-    /* ── Header ─────────────────────────────────────────────── */
-    header {
-      padding: 48px 24px 32px;
+    /* ── Nav ── */
+    nav {
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+      border-bottom: 1px solid var(--border-dim);
+    }
+
+    .nav-label {
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .nav-year {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem;
+      color: var(--blue-light);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 88px 32px 72px;
+      position: relative;
+      z-index: 1;
       text-align: center;
     }
 
-    header h1 {
-      font-size: 2.5rem;
-      color: var(--neon-green);
-      text-shadow: 0 0 20px #39ff14, 0 0 40px #39ff14;
+    /* Large ghosted "2040" behind the headline */
+    .hero-bg-year {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(120px, 22vw, 300px);
+      font-weight: 700;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(59, 130, 246, 0.09);
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-eyebrow {
+      display: inline-block;
+      font-size: 0.63rem;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--blue-light);
+      border: 1px solid var(--border);
+      padding: 6px 18px;
+      border-radius: 100px;
+      margin-bottom: 36px;
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(3rem, 7.5vw, 5.8rem);
+      font-weight: 700;
+      line-height: 1.06;
+      color: #f0eee6;
+      margin-bottom: 32px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--blue-light);
+    }
+
+    .hero-tagline {
+      font-size: clamp(1rem, 2.2vw, 1.2rem);
+      font-weight: 300;
+      color: #7a8caa;
+      max-width: 560px;
+      margin: 0 auto 52px;
+      line-height: 1.75;
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hero-meta-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    /* ── Premise ── */
+    .premise {
+      padding: 72px 0;
+      border-top: 1px solid var(--border-dim);
+      border-bottom: 1px solid var(--border-dim);
+      position: relative;
+      z-index: 1;
+    }
+
+    .premise-inner {
+      max-width: 680px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .section-label {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--blue);
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .premise p {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.15rem, 2.5vw, 1.42rem);
+      font-weight: 400;
+      line-height: 1.8;
+      color: #8fa0bc;
+    }
+
+    .premise p strong {
+      color: #dde4f0;
+      font-weight: 700;
+    }
+
+    /* ── Decision cards ── */
+    .decisions {
+      padding: 80px 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .decisions-header {
+      text-align: center;
+      margin-bottom: 52px;
+    }
+
+    .decisions-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 400;
+      font-style: italic;
+      color: #dde4f0;
+      margin-top: 10px;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .decision-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-dim);
+      border-radius: 10px;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: border-color 300ms, background 300ms, transform 250ms;
+      backdrop-filter: blur(8px);
+    }
+
+    .decision-card:hover {
+      border-color: var(--border);
+      background: rgba(59, 130, 246, 0.05);
+      transform: translateY(-2px);
+    }
+
+    .card-number {
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      color: var(--blue);
+      text-transform: uppercase;
+    }
+
+    .card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #e8eef8;
+      line-height: 1.3;
+    }
+
+    .card-body {
+      font-size: 0.82rem;
+      font-weight: 300;
+      color: #4a5a72;
+      line-height: 1.72;
+      flex: 1;
+    }
+
+    .card-divider {
+      height: 1px;
+      background: var(--border-dim);
+    }
+
+    .card-choice {
+      font-size: 0.7rem;
+      font-weight: 400;
+      color: #3d4f66;
+      font-style: italic;
+    }
+
+    /* ── Status ── */
+    .status {
+      padding: 72px 0;
+      text-align: center;
+      border-top: 1px solid var(--border-dim);
+      position: relative;
+      z-index: 1;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--amber);
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.22);
+      padding: 8px 20px;
+      border-radius: 100px;
+      margin-bottom: 28px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--amber);
+      animation: pulse 2.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1;   transform: scale(1);   }
+      50%       { opacity: 0.35; transform: scale(0.65); }
+    }
+
+    .status h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.3rem, 2.5vw, 1.75rem);
+      font-weight: 400;
+      color: #dde4f0;
       margin-bottom: 16px;
     }
 
-    header p {
-      font-size: 0.55rem;
+    .status p {
+      font-size: 0.82rem;
       color: var(--text-dim);
-      letter-spacing: 3px;
+      max-width: 400px;
+      margin: 0 auto;
+      line-height: 1.75;
     }
 
-    /* ── Card grid ──────────────────────────────────────────── */
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-      padding: 24px 0;
-    }
-
-    /* ── Game card ──────────────────────────────────────────── */
-    .game-card {
-      background: var(--card-bg);
-      border: 2px solid var(--border);
-      border-radius: 4px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      transition: border-color 200ms, box-shadow 200ms;
-    }
-
-    .game-card:hover {
-      border-color: var(--neon-cyan);
-      box-shadow: 0 0 16px rgba(0, 245, 255, 0.25);
-    }
-
-    /* Thumbnail — colored block with abbreviated game name */
-    .card-thumbnail {
-      height: 140px;
-      border-radius: 2px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.4rem;
-    }
-
-    .game-card h2 {
-      font-size: 0.75rem;
-      color: var(--text);
-      margin: 0;
-    }
-
-    .game-card p {
-      font-size: 0.5rem;
-      color: var(--text-dim);
-      margin: 0;
-    }
-
-    /* PLAY button */
-    .btn-play {
-      display: inline-block;
-      padding: 12px 24px;
-      border: 2px solid var(--neon-green);
-      background: transparent;
-      color: var(--neon-green);
-      cursor: pointer;
-      text-decoration: none;
-      font-family: inherit;
-      font-size: 0.6rem;
-      margin-top: auto;
-      text-align: center;
-      transition: background 150ms, color 150ms;
-    }
-
-    .btn-play:hover {
-      background: var(--neon-green);
-      color: #0a0a0f;
-    }
-
-    /* ── Coming Soon cards ──────────────────────────────────── */
-    /* The thumbnail content is visually muted; an overlay badge sits on top */
-    .game-card.coming-soon .card-thumbnail {
-      position: relative; /* needed so the banner overlay can be positioned inside */
-    }
-
-    /* Full-cover "COMING SOON" overlay on the thumbnail */
-    .coming-soon-banner {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.45rem;
-      letter-spacing: 2px;
-      color: #8888bb;
-      background: rgba(10, 10, 15, 0.82);
-      border-radius: 2px;
-    }
-
-    /* Mute title and description text */
-    .game-card.coming-soon h2,
-    .game-card.coming-soon p {
-      opacity: 0.35;
-    }
-
-    /* Remove the hover glow for coming-soon cards */
-    .game-card.coming-soon:hover {
-      border-color: var(--border);
-      box-shadow: none;
-    }
-
-    /* Disabled PLAY button — greyed out, not clickable */
-    .btn-play.disabled {
-      border-color: #2a2a4a;
-      color: #3a3a5a;
-      cursor: not-allowed;
-      pointer-events: none;
-    }
-
-    /* ── Footer ─────────────────────────────────────────────── */
+    /* ── Footer ── */
     footer {
-      padding: 32px 24px;
-      text-align: center;
+      padding: 28px 32px;
+      border-top: 1px solid var(--border-dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+
+    .footer-copy {
+      font-size: 0.63rem;
       color: var(--text-dim);
-      font-size: 0.45rem;
+      letter-spacing: 0.05em;
     }
 
-    /* ── Responsive breakpoints ─────────────────────────────── */
-    /* Tablet: 2 columns */
-    @media (max-width: 767px) and (min-width: 480px) {
-      .card-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
+    .arcade-link {
+      font-size: 0.66rem;
+      font-weight: 500;
+      color: var(--text-dim);
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      transition: color 200ms;
     }
 
-    /* Mobile: 1 column */
-    @media (max-width: 479px) {
-      header h1 {
-        font-size: 1.5rem;
-      }
-      .card-grid {
+    .arcade-link:hover {
+      color: var(--text);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 720px) {
+      .decision-grid {
         grid-template-columns: 1fr;
+        max-width: 420px;
+        margin: 0 auto;
       }
+      .hero { padding: 64px 24px 52px; }
+      nav   { padding: 20px 24px; }
+      footer {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+        padding: 24px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container { padding: 0 20px; }
+      .hero-meta-dot { display: none; }
+      .hero-meta { gap: 12px; }
     }
   </style>
 </head>
 <body>
 
-  <header>
+  <nav>
+    <span class="nav-label">GoManzanas</span>
+    <span class="nav-year">2040</span>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-bg-year" aria-hidden="true">2040</div>
     <div class="container">
-      <h1>ARCADE</h1>
-      <p>SELECT YOUR GAME</p>
+      <div class="hero-content">
+        <span class="hero-eyebrow">A narrative project &mdash; in development</span>
+        <h1>Growing Up <em>2040</em></h1>
+        <p class="hero-tagline">
+          A choose-your-own-adventure for Bay Area parents of today&rsquo;s sixth graders.
+          Five decisions. Fourteen years. One future.
+        </p>
+        <div class="hero-meta">
+          <span>Choose-your-own-adventure</span>
+          <span class="hero-meta-dot"></span>
+          <span>Bay Area</span>
+          <span class="hero-meta-dot"></span>
+          <span>AI &amp; Education</span>
+          <span class="hero-meta-dot"></span>
+          <span>For parents</span>
+        </div>
+      </div>
     </div>
-  </header>
+  </section>
 
-  <main>
+  <!-- Premise -->
+  <section class="premise">
     <div class="container">
-      <div class="card-grid">
+      <div class="premise-inner">
+        <span class="section-label">The premise</span>
+        <p>
+          Your child is in sixth grade. The world they&rsquo;ll enter at twenty-five
+          is being built <strong>right now</strong> &mdash; by AI researchers, policymakers,
+          and companies racing to define what work, learning, and success look like
+          in 2040. <strong>You have a say in how they get there.</strong>
+          If you start paying attention today.
+        </p>
+      </div>
+    </div>
+  </section>
 
-        <!-- Snake -->
-        <article class="game-card">
-          <div class="card-thumbnail" style="background: rgba(57,255,20,0.12); border: 1px solid #39ff14; color: #39ff14; text-shadow: 0 0 12px #39ff14;">
-            SNK
-          </div>
-          <h2>SNAKE</h2>
-          <p>Eat. Grow. Survive.</p>
-          <a href="games/snake.html" class="btn-play">PLAY</a>
-        </article>
+  <!-- Decision previews -->
+  <section class="decisions">
+    <div class="container">
+      <div class="decisions-header">
+        <span class="section-label">Preview &mdash; five decisions</span>
+        <h2>The questions you&rsquo;ll face</h2>
+      </div>
+      <div class="decision-grid">
 
-        <!-- 2048 -->
-        <article class="game-card">
-          <div class="card-thumbnail" style="background: rgba(0,245,255,0.12); border: 1px solid #00f5ff; color: #00f5ff; text-shadow: 0 0 12px #00f5ff;">
-            2048
-          </div>
-          <h2>2048</h2>
-          <p>Slide to conquer.</p>
-          <a href="games/2048.html" class="btn-play">PLAY</a>
-        </article>
+        <div class="decision-card">
+          <span class="card-number">Decision 01</span>
+          <h3 class="card-title">The School Bet</h3>
+          <p class="card-body">
+            Traditional track, specialized STEM program, or a new model of learning
+            that barely exists yet. By 8th grade, the path starts to narrow.
+          </p>
+          <div class="card-divider"></div>
+          <p class="card-choice">Stay the course &mdash; or jump?</p>
+        </div>
 
-        <!-- Breakout — live -->
-        <article class="game-card">
-          <div class="card-thumbnail" style="background: rgba(255,140,0,0.12); border: 1px solid #ff8c00; color: #ff8c00; text-shadow: 0 0 12px #ff8c00;">
-            BRK
-          </div>
-          <h2>BREAKOUT</h2>
-          <p>Break every brick.</p>
-          <a href="games/breakout.html" class="btn-play">PLAY</a>
-        </article>
+        <div class="decision-card">
+          <span class="card-number">Decision 02</span>
+          <h3 class="card-title">The AI Relationship</h3>
+          <p class="card-body">
+            Assistant, collaborator, or competition. How your child learns to work
+            alongside AI in the next six years will define what kind of work they can do.
+          </p>
+          <div class="card-divider"></div>
+          <p class="card-choice">Embrace it early &mdash; or wait?</p>
+        </div>
 
-        <!-- Space Invaders — not yet implemented -->
-        <article class="game-card coming-soon">
-          <div class="card-thumbnail" style="background: rgba(255,0,255,0.04); border: 1px solid #2a0a2a; color: #220022; text-shadow: none;">
-            INV
-            <div class="coming-soon-banner">COMING SOON</div>
-          </div>
-          <h2>INVADERS</h2>
-          <p>Defend the planet.</p>
-          <span class="btn-play disabled">PLAY</span>
-        </article>
-
-        <!-- Tetris — not yet implemented -->
-        <article class="game-card coming-soon">
-          <div class="card-thumbnail" style="background: rgba(255,255,0,0.04); border: 1px solid #2a2a0a; color: #222200; text-shadow: none;">
-            TET
-            <div class="coming-soon-banner">COMING SOON</div>
-          </div>
-          <h2>TETRIS</h2>
-          <p>Stack. Clear. Repeat.</p>
-          <span class="btn-play disabled">PLAY</span>
-        </article>
-
-        <!-- Frogger -->
-        <article class="game-card">
-          <div class="card-thumbnail" style="background: rgba(0,255,136,0.12); border: 1px solid #00ff88; color: #00ff88; text-shadow: 0 0 12px #00ff88;">
-            FRG
-          </div>
-          <h2>FROGGER</h2>
-          <p>Hop. Dodge. Survive.</p>
-          <a href="games/frogger.html" class="btn-play">PLAY</a>
-        </article>
+        <div class="decision-card">
+          <span class="card-number">Decision 03</span>
+          <h3 class="card-title">The Bay Area Calculus</h3>
+          <p class="card-body">
+            The most expensive place to raise a child. The densest node of
+            future-building on Earth. The network effects are real &mdash;
+            and so is the cost.
+          </p>
+          <div class="card-divider"></div>
+          <p class="card-choice">Stay in &mdash; or get out?</p>
+        </div>
 
       </div>
     </div>
-  </main>
+  </section>
+
+  <!-- Status -->
+  <section class="status">
+    <div class="container">
+      <div class="status-badge">
+        <span class="status-dot"></span>
+        Being written now
+      </div>
+      <h3>The full story is in the works.</h3>
+      <p>
+        This is a live project &mdash; the decisions, branches, and outcomes
+        are being researched and written. Check back soon.
+      </p>
+    </div>
+  </section>
 
   <footer>
-    <p>&copy; 2026 ARCADE</p>
+    <span class="footer-copy">GoManzanas &middot; Growing Up 2040</span>
+    <a href="arcade.html" class="arcade-link">to arcade &rarr;</a>
   </footer>
 
 </body>
